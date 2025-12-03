@@ -1,0 +1,6 @@
+# Ignore all ZIP/7Z archives
+*.zip
+*.7z
+
+# Ignore all testcases output files
+Project/Project Description & Template/Testcases/
