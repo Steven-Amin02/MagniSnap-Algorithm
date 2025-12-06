@@ -58,6 +58,11 @@ public class Graph
 
     public void DijkstraShortestPath(Point anchor)
     {
+        // Validate anchor point
+        if (anchor.X < 0 || anchor.X >= width || anchor.Y < 0 || anchor.Y >= height)
+            throw new ArgumentOutOfRangeException(nameof(anchor), "Anchor must be inside image bounds.");
+
+
         dist = new double[height, width];
         parent = new Point[height, width];
 
@@ -66,59 +71,62 @@ public class Graph
             for (int x = 0; x < width; x++)
             {
                 dist[y, x] = double.MaxValue;
+                parent[y, x] = new Point(-1, -1);
             }
         }
-        dist[anchor.Y, anchor.X] = 0;
+        dist[anchor.Y, anchor.X] = 0.0;
 
         var pq = new SimplePriorityQueue<Point, double>();
-        pq.Enqueue(anchor, 0);
+        pq.Enqueue(anchor, 0.0);
 
         int[] dx = { -1, 0, 1, 0 };
         int[] dy = { 0, -1, 0, 1 };
+
         while (pq.Count > 0)
         {
-            double currentDist = pq.GetPriority(pq.First);
             Point current = pq.Dequeue();
-
-            if (currentDist > dist[current.Y, current.X])
-                continue;
+            double currentDist = dist[current.Y, current.X];
 
             for (int dir = 0; dir < 4; dir++)
             {
                 int newX = current.X + dx[dir];
                 int newY = current.Y + dy[dir];
-                if (newX >= 0 && newX < width && newY >= 0 && newY < height)
+
+                if (newX < 0 || newX >= width || newY < 0 || newY >= height)
+                    continue;
+
+                double weight;
+                switch (dir)
                 {
-                    double weight = 0;
-                    if (dir == 0) // Left
+                    case 0: // Left
+                            // edge between (newX,newY) and (current.X,current.Y) — newX = current.X-1
                         weight = rightWeights[current.Y, newX];
-                    else if (dir == 1) // Up
+                        break;
+                    case 1: // Up (newY = current.Y - 1)
                         weight = bottomWeights[newY, current.X];
-                    else if (dir == 2) // Right
+                        break;
+                    case 2: // Right
                         weight = rightWeights[current.Y, current.X];
-                    else if (dir == 3) // Down
+                        break;
+                    default: // case 3 Down
                         weight = bottomWeights[current.Y, current.X];
+                        break;
+                }
 
-                    double newDist = dist[current.Y, current.X] + weight;
+                double newDist = currentDist + weight;
+                if (newDist < dist[newY, newX])
+                {
+                    dist[newY, newX] = newDist;
+                    parent[newY, newX] = current;
+                    Point neighbor = new Point(newX, newY);
 
-                    if (newDist < dist[newY, newX])
-                    {
-                        dist[newY, newX] = newDist;
-                        parent[newY, newX] = current;
-                        Point neighbor = new Point(newX, newY);
-                        if (pq.Contains(neighbor))
-                            pq.UpdatePriority(neighbor, newDist);
-                        else
-                            pq.Enqueue(neighbor, newDist);
-                    }
+                    if (pq.Contains(neighbor))
+                        pq.UpdatePriority(neighbor, newDist);
+                    else
+                        pq.Enqueue(neighbor, newDist);
                 }
             }
-
         }
-
-
-
-
     }
 
     public List<Point> GetPath(Point target)
