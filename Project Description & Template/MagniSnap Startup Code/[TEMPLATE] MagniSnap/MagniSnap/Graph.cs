@@ -130,10 +130,30 @@ public class Graph
     }
 
 
-    public List<Point> GetPath(Point target)
+    public List<Point> backthrough(Point target)
     {
         List<Point> path = new List<Point>();
-        // ...
+
+        // Check if target is within bounds
+        if (target.X < 0 || target.X >= width || target.Y < 0 || target.Y >= height)
+            return path;
+
+        // Check if the target is reachable
+        if (dist[target.Y, target.X] == double.MaxValue)
+            return path;
+
+        Point curr = target;
+        // Backtrack until we find the start node (parent is -1, -1)
+        while (curr.X != -1 && curr.Y != -1)
+        {
+            path.Add(curr);
+            curr = parent[curr.Y, curr.X];
+        }
+
+        // The path is currently from Target -> Anchor.
+        // It's often useful to have it Anchor -> Target.
+        path.Reverse();
+
         return path;
     }
 
