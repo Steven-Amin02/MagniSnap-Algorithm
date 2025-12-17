@@ -3,6 +3,7 @@ using Priority_Queue;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Windows.Forms;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement.TextBox;
 
 
@@ -157,4 +158,71 @@ public class Graph
         return path;
     }
 
+    /// <summary>
+    /// Draws a path on the PictureBox
+    /// </summary>
+    public void DrawPath(Graphics g, List<Point> path, PictureBox picBox, Color color, int penWidth)
+    {
+        if (path == null || path.Count < 2)
+            return;
+        
+        Pen pen = new Pen(color, penWidth);
+        
+        // Convert image coordinates to screen coordinates
+        Point[] screenPoints = new Point[path.Count];
+        for (int i = 0; i < path.Count; i++)
+        {
+            screenPoints[i] = GetScreenCoordinates(path[i], picBox);
+        }
+        
+        // Draw lines connecting the path points
+        for (int i = 0; i < screenPoints.Length - 1; i++)
+        {
+            g.DrawLine(pen, screenPoints[i], screenPoints[i + 1]);
+        }
+        
+        pen.Dispose();
+    }
+    
+    /// <summary>
+    /// Draws a point (circle) on the PictureBox
+    /// </summary>
+    public void DrawPoint(Graphics g, Point imagePoint, PictureBox picBox, Color color, int radius)
+    {
+        Point screenPoint = GetScreenCoordinates(imagePoint, picBox);
+        Brush brush = new SolidBrush(color);
+        
+        int x = screenPoint.X - radius / 2;
+        int y = screenPoint.Y - radius / 2;
+        
+        g.FillEllipse(brush, x, y, radius, radius);
+        
+        brush.Dispose();
+    }
+    
+    /// <summary>
+    /// Converts image coordinates to screen coordinates for drawing
+    /// Returns coordinates relative to PictureBox
+    /// </summary>
+    private Point GetScreenCoordinates(Point imagePoint, PictureBox picBox)
+    {
+        if (picBox.Image == null)
+            return new Point(-1, -1);
+        
+        if (picBox.SizeMode == PictureBoxSizeMode.AutoSize)
+        {
+            return new Point(imagePoint.X, imagePoint.Y);
+        }
+        else
+        {
+            // Calculate scaling factors
+            float scaleX = (float)picBox.Width / picBox.Image.Width;
+            float scaleY = (float)picBox.Height / picBox.Image.Height;
+            
+            int screenX = (int)(imagePoint.X * scaleX);
+            int screenY = (int)(imagePoint.Y * scaleY);
+            
+            return new Point(screenX, screenY);
+        }
+    }
 }
