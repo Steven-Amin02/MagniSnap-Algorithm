@@ -29,6 +29,7 @@ public class Graph
         bottomWeights = new double[height, width];
     }
 
+    // ================= GRAPH CONSTRUCTION =================
     public void ConstructGraph()
     {
         for (int y = 0; y < height; y++)
@@ -40,23 +41,19 @@ public class Graph
                 if (x < width - 1)
                 {
                     // If energy is 0 (perfectly flat), weight becomes Infinity.
-                    if (energy.X == 0)
-                        rightWeights[y, x] = 1e9; // Very high cost
-                    else
-                        rightWeights[y, x] = 1.0 / energy.X;
+                    rightWeights[y, x] = (energy.X == 0) ? 1e9 : 1.0 / energy.X;
                 }
 
                 if (y < height - 1)
                 {
-                    if (energy.Y == 0)
-                        bottomWeights[y, x] = 1e9;
-                    else
-                        bottomWeights[y, x] = 1.0 / energy.Y;
+                    bottomWeights[y, x] = (energy.Y == 0) ? 1e9 : 1.0 / energy.Y;
+
                 }
             }
         }
     }
 
+    // ================= DIJKSTRA =================
     public void DijkstraShortestPath(Point anchor)
     {
         // Validate anchor point
@@ -109,8 +106,12 @@ public class Graph
                     case 2: // Right
                         weight = rightWeights[current.Y, current.X];
                         break;
-                    default: // case 3 Down
+                    case 3: // case 3 Down
                         weight = bottomWeights[current.Y, current.X];
+                        break;
+
+                    default: 
+                        weight = 1e9;
                         break;
                 }
 
@@ -129,7 +130,6 @@ public class Graph
             }
         }
     }
-
 
     public List<Point> backthrough(Point target)
     {
@@ -204,7 +204,7 @@ public class Graph
     /// Converts image coordinates to screen coordinates for drawing
     /// Returns coordinates relative to PictureBox
     /// </summary>
-    private Point GetScreenCoordinates(Point imagePoint, PictureBox picBox)
+    public Point GetScreenCoordinates(Point imagePoint, PictureBox picBox)
     {
         if (picBox.Image == null)
             return new Point(-1, -1);
@@ -224,5 +224,30 @@ public class Graph
             
             return new Point(screenX, screenY);
         }
+    }
+
+
+    public List<Point> GenerateConnectedPaths(List<Point> anchors)
+    {
+        List<Point> fullPath = new List<Point>();
+
+        if (anchors == null || anchors.Count < 2)
+            return fullPath;
+
+        for (int i = 0; i < anchors.Count - 1; i++)
+        {
+            DijkstraShortestPath(anchors[i]);
+            List<Point> segment = backthrough(anchors[i + 1]);
+
+            if (segment.Count == 0)
+                continue;
+
+            if (i > 0)
+                segment.RemoveAt(0);
+
+            fullPath.AddRange(segment);
+        }
+
+        return fullPath;
     }
 }

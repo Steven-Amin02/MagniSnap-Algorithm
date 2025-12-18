@@ -19,6 +19,9 @@ namespace MagniSnap
         Point currentAnchor = new Point(-1, -1);
         Point currentFreePoint = new Point(-1, -1);
         List<Point> currentPath;
+        List<Point> confirmedPath;
+        List<Point> allAnchorsList;
+
 
         public MainForm()
         {
@@ -27,7 +30,8 @@ namespace MagniSnap
             
             // Initialize path drawing variables
             currentPath = new List<Point>();
-            
+            confirmedPath = new List<Point>();
+            allAnchorsList = new List<Point>();
             // Add Paint event handler to PictureBox for drawing paths
             mainPictureBox.Paint += MainPictureBox_Paint;
         }
@@ -87,6 +91,8 @@ namespace MagniSnap
         {
             // Clear all paths and reset state
             currentPath.Clear();
+            confirmedPath.Clear();
+            allAnchorsList.Clear();
             currentAnchor = new Point(-1, -1);
             currentFreePoint = new Point(-1, -1);
             mainPictureBox.Refresh();
@@ -111,46 +117,52 @@ namespace MagniSnap
 
         private void mainPictureBox_MouseClick(object sender, MouseEventArgs e)
         {
-            if (e.Button == MouseButtons.Left)
+            if (e.Button == MouseButtons.Left && ImageMatrix != null && isLassoEnabled)
             {
-                if (ImageMatrix != null && isLassoEnabled)
+                // Get image coordinates from mouse position
+                Point imagePoint = GetImageCoordinates(e.Location);
+
+                // Validate point is within image bounds
+                int width = ImageToolkit.GetWidth(ImageMatrix);
+                int height = ImageToolkit.GetHeight(ImageMatrix);
+
+                if (imagePoint.X >= 0 && imagePoint.X < width &&
+                    imagePoint.Y >= 0 && imagePoint.Y < height)
                 {
-                    // Get image coordinates from mouse position
-                    Point imagePoint = GetImageCoordinates(e.Location);
-                    
-                    // Validate point is within image bounds
-                    int width = ImageToolkit.GetWidth(ImageMatrix);
-                    int height = ImageToolkit.GetHeight(ImageMatrix);
-                    
-                    if (imagePoint.X >= 0 && imagePoint.X < width && 
-                        imagePoint.Y >= 0 && imagePoint.Y < height)
+                    // Construct graph if not already done
+                    if (!isGraphConstructed)
                     {
-                        // Construct graph if not already done
-                        if (!isGraphConstructed)
-                        {
-                            imageGraph = new Graph(ImageMatrix);
-                            imageGraph.ConstructGraph();
-                            isGraphConstructed = true;
-                        }
-                        
-                        // Set anchor point
-                        currentAnchor = imagePoint;
-                        
-                        // Run Dijkstra from anchor point to all pixels
-                        imageGraph.DijkstraShortestPath(currentAnchor);
-                        
-                        // Clear current path (will be recalculated on mouse move)
-                        currentPath.Clear();
-                        
-                        // Refresh to redraw
-                        mainPictureBox.Refresh();
+                        imageGraph = new Graph(ImageMatrix);
+                        imageGraph.ConstructGraph();
+                        isGraphConstructed = true;
                     }
+
+                    // Add the point to the anchors list to draw the square marker later
+                    if (currentPath != null && currentPath.Count > 0)
+                    {
+                        if (confirmedPath.Count > 0) currentPath.RemoveAt(0);
+                        confirmedPath.AddRange(currentPath);
+                    }
+
+                    allAnchorsList.Add(imagePoint);
+
+                    // Set anchor point
+                    currentAnchor = imagePoint;
+
+                    // Run Dijkstra from anchor point to all pixels
+                    imageGraph.DijkstraShortestPath(currentAnchor);
+
+                    // Clear current path (will be recalculated on mouse move)
+                    currentPath.Clear();
+
+                    // Refresh to redraw
+                    mainPictureBox.Refresh();
                 }
             }
         }
-
         private void mainPictureBox_MouseMove(object sender, MouseEventArgs e)
         {
+
             txtMousePosX.Text = e.X.ToString();
             txtMousePosY.Text = e.Y.ToString();
 
@@ -167,7 +179,7 @@ namespace MagniSnap
                     imagePoint.Y >= 0 && imagePoint.Y < height)
                 {
                     currentFreePoint = imagePoint;
-                    
+
                     // Backtrack path from free point to anchor point
                     currentPath = imageGraph.backthrough(currentFreePoint);
                     
@@ -181,44 +193,48 @@ namespace MagniSnap
         {
 
         }
-        
-        /// <summary>
-        /// Paint event handler for PictureBox to draw the livewire path
-        /// </summary>
+
+
+
+        // Helper function to draw a small square at anchor points
+        private void DrawAnchorSquare(Graphics g, Point imgPt)
+        {
+            // You can now call this method because it is public
+            Point screenPt = imageGraph.GetScreenCoordinates(imgPt, mainPictureBox);
+            int size = 6;
+            Rectangle rect = new Rectangle(screenPt.X - size / 2, screenPt.Y - size / 2, size, size);
+
+            g.FillRectangle(Brushes.White, rect); // White fill
+            g.DrawRectangle(Pens.Green, rect);   // Green border
+        }
+
         private void MainPictureBox_Paint(object sender, PaintEventArgs e)
         {
-            if (ImageMatrix == null || !isLassoEnabled)
-                return;
-            
-            PictureBox picBox = sender as PictureBox;
-            if (picBox.Image == null)
-                return;
-            
+            if (ImageMatrix == null || !isLassoEnabled || imageGraph == null) return;
+
             Graphics g = e.Graphics;
-            
-            // Draw current path from anchor to free point
-            if (currentPath != null && currentPath.Count > 1 && imageGraph != null)
+            g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+
+            // 1. Draw the fully confirmed path
+            if (confirmedPath != null && confirmedPath.Count > 1)
             {
-                imageGraph.DrawPath(g, currentPath, picBox, Color.Red, 2);
+                imageGraph.DrawPath(g, confirmedPath, mainPictureBox, Color.Yellow, 2);
             }
-            
-            // Draw anchor point
-            if (currentAnchor.X >= 0 && currentAnchor.Y >= 0 && imageGraph != null)
+
+            // 2. Draw the current live path (between the last anchor and the mouse)
+            if (currentPath != null && currentPath.Count > 1)
             {
-                imageGraph.DrawPoint(g, currentAnchor, picBox, Color.Green, 5);
+                imageGraph.DrawPath(g, currentPath, mainPictureBox, Color.Red, 2);
             }
-            
-            // Draw current free point (mouse position)
-            if (isGraphConstructed && currentFreePoint.X >= 0 && currentFreePoint.Y >= 0 && imageGraph != null)
+
+            // 3. Draw small squares at each anchor point (professional appearance)
+            foreach (Point anchor in allAnchorsList)
             {
-                imageGraph.DrawPoint(g, currentFreePoint, picBox, Color.Blue, 3);
+                DrawAnchorSquare(g, anchor);
             }
-        }
-        
-        /// <summary>
-        /// Converts screen coordinates (mouse position) to image coordinates
-        /// Mouse coordinates are relative to the PictureBox
-        /// </summary>
+        }     
+
+
         private Point GetImageCoordinates(Point screenPoint)
         {
             if (mainPictureBox.Image == null)
