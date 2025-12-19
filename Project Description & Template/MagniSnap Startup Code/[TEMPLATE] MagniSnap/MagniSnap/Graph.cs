@@ -96,6 +96,12 @@ public class Graph
                 double weight;
                 switch (dir)
                 {
+
+                    //0 1 2 3 
+                    //1 x x x
+                    //2 x o x
+                    //3 x x x
+
                     case 0: // Left
                             // edge between (newX,newY) and (current.X,current.Y) — newX = current.X-1
                         weight = rightWeights[current.Y, newX];
