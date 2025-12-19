@@ -404,8 +404,70 @@ namespace MagniSnap
             cropForm.Show();
         }
 
+        private void saveToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (mainPictureBox.Image == null)
+            {
+                MessageBox.Show(
+                    "There is no image to save.",
+                    "Save Image",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning
+                );
+                return;
+            }
 
+            using (SaveFileDialog sfd = new SaveFileDialog())
+            {
+                sfd.Title = "Save Image";
+                sfd.Filter =
+                    "PNG Image (*.png)|*.png|" +
+                    "JPEG Image (*.jpg)|*.jpg|" +
+                    "Bitmap Image (*.bmp)|*.bmp";
+                sfd.DefaultExt = "png";
+                sfd.AddExtension = true;
 
+                if (sfd.ShowDialog() == DialogResult.OK)
+                {
+                    try
+                    {
+                        using (Bitmap bmp = new Bitmap(mainPictureBox.Image))
+                        {
+                            switch (System.IO.Path.GetExtension(sfd.FileName).ToLower())
+                            {
+                                case ".jpg":
+                                    bmp.Save(sfd.FileName, System.Drawing.Imaging.ImageFormat.Jpeg);
+                                    break;
+
+                                case ".bmp":
+                                    bmp.Save(sfd.FileName, System.Drawing.Imaging.ImageFormat.Bmp);
+                                    break;
+
+                                default:
+                                    bmp.Save(sfd.FileName, System.Drawing.Imaging.ImageFormat.Png);
+                                    break;
+                            }
+                        }
+
+                        MessageBox.Show(
+                            "Image saved successfully.",
+                            "Save Image",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Information
+                        );
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show(
+                            "Failed to save image.\n" + ex.Message,
+                            "Error",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Error
+                        );
+                    }
+                }
+            }
+        }
 
     }
 
