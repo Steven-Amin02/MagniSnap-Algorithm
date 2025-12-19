@@ -82,8 +82,11 @@ namespace MagniSnap
                 isGraphConstructed = false;
                 imageGraph = null;
                 currentPath.Clear();
+                confirmedPath.Clear();
+                allAnchorsList.Clear();
                 currentAnchor = new Point(-1, -1);
                 currentFreePoint = new Point(-1, -1);
+                mainPictureBox.Refresh();
             }
         }
 
@@ -193,8 +196,6 @@ namespace MagniSnap
         {
 
         }
-
-
 
         // Helper function to draw a small square at anchor points
         private void DrawAnchorSquare(Graphics g, Point imgPt)
